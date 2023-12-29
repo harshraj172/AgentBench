@@ -47,6 +47,9 @@ class Prompter:
     @staticmethod
     def get_prompter(prompter: Union[Dict[str, Any], None]):
         # check if prompter_name is a method and its variable
+        print("-"*100)
+        print("prompter =", prompter)
+        print("-"*100)
         if not prompter:
             return Prompter.default()
         assert isinstance(prompter, dict)
@@ -95,6 +98,32 @@ class Prompter:
 
         return prompter
 
+    @staticmethod
+    def system_role_content_dict(
+        message_key: str = "messages",
+        role_key: str = "role",
+        content_key: str = "content",
+        system_role: str = "system",
+        user_role: str = "user",
+        agent_role: str = "agent",
+    ):  
+        from .system_prompt_template import dbbench_react 
+        def prompter(messages: List[Dict[str, str]]):
+            nonlocal message_key, role_key, content_key, user_role, agent_role
+            role_dict = {
+                "system": system_role,
+                "user": user_role,
+                "agent": agent_role,
+            }
+            prompt = [{role_key: role_dict["system"], content_key: dbbench_react}]
+            for item in messages:
+                prompt.append(
+                    {role_key: role_dict[item["role"]], content_key: item["content"]}
+                )
+            return {message_key: prompt}
+
+        return prompter
+    
     @staticmethod
     def prompt_string(
         prefix: str = "",
@@ -190,6 +219,7 @@ class HTTPAgent(AgentClient):
             try:
                 body = self.body.copy()
                 body.update(self._handle_history(history))
+                print("body =", body)
                 with no_ssl_verification():
                     resp = requests.post(
                         self.url, json=body, headers=self.headers, proxies=self.proxies, timeout=120

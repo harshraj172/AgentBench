@@ -393,7 +393,6 @@ class Assigner:
     ):
         def worker_thread():
             nonlocal agent, task, index, finish_callback
-
             result = self.tasks[task].run_sample(index, self.agents[agent])
 
             if finish_callback:

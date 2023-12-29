@@ -2,16 +2,14 @@ import: definition.yaml
 
 concurrency:
   task:
-    dbbench-std: 5
-    os-std: 5
+    alfworld-dev: 3
   agent:
-    gpt-3.5-turbo-0613: 5
+    gpt-4-1106-preview: 1
 
 assignments: # List[Assignment] | Assignment
   - agent: # "task": List[str] | str ,  "agent": List[str] | str
-      - gpt-3.5-turbo-0613
+      - gpt-4-1106-preview
     task:
-      - dbbench-std
-      - os-std
+      - alfworld-dev
 
 output: "outputs/{TIMESTAMP}"
