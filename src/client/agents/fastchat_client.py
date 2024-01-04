@@ -103,7 +103,7 @@ class Prompter:
 #                              temperature, max_new_tokens, top_p, prompter, args)
 #     oai_agent = HTTPAgent(url="https://api.openai.com/v1/chat/completions",
 #                          body={"model": "gpt-4-0613", "temperature": 0, "max_tokens": 512},
-#                          headers={"Content-Type": "application/json", "Authorization": "Bearer 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"},
+#                          headers={"Content-Type": "application/json", "Authorization": "Bearer sk-"},
 #                          return_format="{response[choices][0][message][content]}",
 #                          prompter={"name": "system_role_content_dict", "args": {"agent_role": "assistant"}})
     
