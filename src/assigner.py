@@ -265,6 +265,7 @@ class Assigner:
         while True:
             try:
                 agent, task, index = next(generator)
+                # if index==20: break
             except StopIteration:
                 break
             self.start_worker(agent, task, index, self.finish_callback)
@@ -305,6 +306,9 @@ class Assigner:
             nonlocal agent, task, index, result
             task_client = self.tasks[task]
             overall = task_client.calculate_overall(self.completions[agent][task])
+            print("*"*25)
+            print("overall =", overall)
+            print("*"*25)
             with open(
                 os.path.join(self.get_output_dir(agent, task), "overall.json"), "w"
             ) as f:
@@ -320,10 +324,11 @@ class Assigner:
             self.completions[agent][task].append(result)
             if len(self.completions[agent][task]) == len(self.task_indices[task]):
                 overall_calculation = True
+        overall_calculation = True
         if overall_calculation:
             output_dir = self.get_output_dir(agent, task)
-            if os.path.exists(os.path.join(output_dir, "overall.json")):
-                return
+            # if os.path.exists(os.path.join(output_dir, "overall.json")):
+            #     return
             threading.Thread(target=calculate_overall_worker).start()
 
     def finish_callback(

@@ -313,6 +313,9 @@ class OSInteraction(Task):
         return list(self.problem_configs.keys())
 
     def extract_action(self, raw: str):
+        raw = f"{raw.split('Act:')[0].strip()}\nAct:{raw.split('Act:')[-1].strip()}"
+        print("#"*30)
+        print("raw =", raw)
         think_pattern = r"Think:\s*(.+)"
         act_pattern = r"Act:\s*(.+)"
 
@@ -339,12 +342,16 @@ class OSInteraction(Task):
                 ret["action"] = "commit"
                 ret["content"] = content
                 break
-
+        
+        print("think =", think)
+        print("act =", act)
         if ret["action"] == "bash":
             # extract from ```bash to ```
             content_pattern = r"```bash\n(.*?)\n```"
             content = re.findall(content_pattern, raw, re.DOTALL)
             content = "\n\n".join(content)
+            print("content =", content)
+            print("#"*30)
             ret["content"] = content
 
         return ret

@@ -9,6 +9,7 @@ from requests.exceptions import Timeout, ConnectionError
 
 from ..agent import AgentClient
 from ...typings import AgentNetworkException
+from .http_agent import HTTPAgent
 
 
 class Prompter:
@@ -94,6 +95,61 @@ class Prompter:
         return prompter
 
 
+# def review_generate_os(history, controller_address, worker_address, \
+#                     model_name, temperature, max_new_tokens, top_p, prompter, args):
+#     s = history[-1]["content"]
+#     oai_history = [{"role": "system", "content": "You have to act like a reviewer of an agent that is solving a task in a Linux OS. The agent responds via Think-Act pair. You have to find problems in the agent's most recent Think-Act pair (if any).\nIf there is no problem just print '[NO PROBLEM]' otherwise point out the problem in detail."}] + list(history[6:])
+#     fs_agent = FastChatAgent(model_name, controller_address, worker_address, \
+#                              temperature, max_new_tokens, top_p, prompter, args)
+#     oai_agent = HTTPAgent(url="https://api.openai.com/v1/chat/completions",
+#                          body={"model": "gpt-4-0613", "temperature": 0, "max_tokens": 512},
+#                          headers={"Content-Type": "application/json", "Authorization": "Bearer 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"},
+#                          return_format="{response[choices][0][message][content]}",
+#                          prompter={"name": "system_role_content_dict", "args": {"agent_role": "assistant"}})
+    
+#     for _ in range(10):
+#         oai_resp = "Review: " + oai_agent.inference(oai_history)
+#         oai_history.append({"role": "agent", "content": oai_resp})
+#         s += f"\n{oai_resp}"
+#         if "NO PROBLEM" in oai_resp:
+#             break
+#         history.append({"role": "user", "content": f"{oai_resp}\nRewrite the corrected 'Act' based on the review."})
+#         fs_resp = 'Act:' + fs_agent.inference(history).split('Act:')[-1]
+#         history.append({"role": "agent", "content": fs_resp})
+#         oai_history.append({"role": "user", "content": fs_resp})
+#         s += f"\n{fs_resp}"
+#     print("s =", s)
+#     print("-"*100)
+#     return s
+
+
+def review_generate_os(history, controller_address, worker_address, \
+                    model_name, temperature, max_new_tokens, top_p, prompter, args):
+    s = history[-1]["content"]
+    _history = history 
+    fs_agent = FastChatAgent(model_name, controller_address, worker_address, \
+                             temperature, max_new_tokens, top_p, prompter, args)
+    oai_agent = HTTPAgent(url="https://api.openai.com/v1/chat/completions",
+                         body={"model": "gpt-4-0613", "temperature": 0, "max_tokens": 512},
+                         headers={"Content-Type": "application/json", "Authorization": "Bearer sk-"},
+                         return_format="{response[choices][0][message][content]}",
+                         prompter={"name": "role_content_dict", "args": {"agent_role": "assistant"}})
+    for _ in range(10):
+        _history.append({"role": "user", "content": "Review the agent's most recent response/Act and find problems (if any). Correctness of an 'Act' is defined by doing the correct operation to solve the task or producing the final output/answer as per the instructions provided.\nIf there is no problem with the agent's message just respond '[The 'Act' seems correct]' ONLY. Otherwise just hint a solution along with pointing out the problem in detail. DO NOT provide the correct code in the review"})
+        oai_resp = "Review: " + oai_agent.inference(_history)
+        _history.append({"role": "agent", "content": oai_resp})
+        s += f"\n{oai_resp}"
+        if "The 'Act' seems correct" in oai_resp:
+            break
+        _history.append({"role": "user", "content": "Rewrite the corrected 'Act' based on the review"})
+        fs_resp = "Act:" + fs_agent.inference(_history).split("Act:")[-1]
+        _history.append({"role": "agent", "content": fs_resp})
+        s += f"\n{fs_resp}"
+    print("s =", s)
+    print("-"*100)
+    return s
+        
+        
 class FastChatAgent(AgentClient):
     """This agent is a test agent, which does nothing. (return empty string for each action)"""
 
@@ -119,9 +175,11 @@ class FastChatAgent(AgentClient):
         self.temperature = temperature
         self.max_new_tokens = max_new_tokens
         self.top_p = top_p
-        self.prompter = Prompter.get_prompter(prompter)
+        if isinstance(prompter, dict):
+            self.prompter = Prompter.get_prompter(prompter)
+        else:
+            self.prompter = prompter
         self.args = args or {}
-        print(self.max_new_tokens)
         super().__init__(**kwargs)
 
     def inference(self, history: List[dict]) -> str:
@@ -180,6 +238,11 @@ class FastChatAgent(AgentClient):
                         if data["error_code"] != 0:
                             raise AgentNetworkException(data["text"])
                         text = data["text"]
+                if "Think:" in text and "Act:" in text:
+                    history.append({"role": "agent", "content": text})
+                    text = review_generate_os(history, self.controller_address, self.worker_address, \
+                                    self.model_name, self.temperature, self.max_new_tokens, \
+                                    self.top_p, self.prompter, self.args)
                 return text
             # if timeout or connection error, retry
             except Timeout:

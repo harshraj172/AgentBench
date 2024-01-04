@@ -2,5 +2,5 @@ definition:
   import: tasks/task_assembly.yaml
 
 start:
-  dbbench-std: 5
-  os-std: 5
+  os-dev: 1
+  dbbench-dev: 1
